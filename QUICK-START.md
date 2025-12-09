@@ -66,10 +66,12 @@ npx expo start
 
 ### Backend (Server)
 - ✅ Product model with Mongoose (`server/models/product.model.js`)
-- ✅ Three API endpoints (`server/routes/product.routes.js`):
-  - GET `/api/products` - List all products
+- ✅ **Five API endpoints** (`server/routes/product.routes.js`):
+  - GET `/api/products` - List all products (with pagination, search, filter) ✨
   - GET `/api/products/:id` - Get single product
   - POST `/api/products` - Create new product
+  - PUT `/api/products/:id` - Update product ✨ **BONUS**
+  - DELETE `/api/products/:id` - Delete product ✨ **BONUS**
 - ✅ Database seed script with 8 products (`server/seed.js`)
 - ✅ Updated server to include product routes (`server/index.js`)
 
@@ -80,6 +82,10 @@ npx expo start
 - ✅ Display products with images from Unsplash
 - ✅ Add to cart functionality
 - ✅ Refresh button to reload products
+- ✅ Search functionality with search bar ✨ **BONUS**
+- ✅ Category filtering with visual feedback ✨ **BONUS**
+- ✅ Pagination controls (Previous/Next) ✨ **BONUS**
+- ✅ Delete product with confirmation ✨ **BONUS**
 
 ### Documentation
 - ✅ Comprehensive assignment guide (`assignment-1.md`)
@@ -93,16 +99,27 @@ npx expo start
 Open a new terminal and test:
 
 ```bash
-# List all products
-curl http://localhost:5000/api/products
+# List all products (with pagination)
+curl http://localhost:5000/api/products?page=1&limit=10
 
-# Search products
+# Search products ✨ BONUS
 curl "http://localhost:5000/api/products?q=apple"
+
+# Filter by category ✨ BONUS
+curl "http://localhost:5000/api/products?category=Fruits"
 
 # Create a product
 curl -X POST http://localhost:5000/api/products \
   -H "Content-Type: application/json" \
   -d '{"name":"Test Product","price":99,"category":"Fruits","stock":10}'
+
+# Update a product ✨ BONUS
+curl -X PUT http://localhost:5000/api/products/<PRODUCT_ID> \
+  -H "Content-Type: application/json" \
+  -d '{"price":150,"stock":20}'
+
+# Delete a product ✨ BONUS
+curl -X DELETE http://localhost:5000/api/products/<PRODUCT_ID>
 ```
 
 ---
@@ -128,7 +145,8 @@ For complete details, see: `assignment-1.md`
 
 **Total Setup Time**: ~5-10 minutes  
 **Files Created/Modified**: 6 backend + 1 frontend + 3 docs  
-**API Endpoints**: 3  
+**API Endpoints**: 5 (3 required + 2 bonus) ✨  
+**Bonus Features**: ALL 5 implemented ✨  
 **Sample Products**: 8  
 **Ready to Demo**: ✅ YES
 

@@ -34,6 +34,10 @@ const home = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // initialize dispatcher
   const dispatch = useDispatch()
@@ -41,26 +45,80 @@ const home = () => {
   useEffect(() => {
     loadSavedLocation();
     fetchProducts();
-  }, []);
+  }, [selectedCategory, currentPage]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (search = "") => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`${API_BASE}/products`);
+      
+      // Build query string
+      let url = `${API_BASE}/products?page=${currentPage}&limit=20`;
+      if (search || searchQuery) {
+        url += `&q=${search || searchQuery}`;
+      }
+      if (selectedCategory) {
+        url += `&category=${selectedCategory}`;
+      }
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error("Failed to fetch products");
       }
       
       const data = await response.json();
-      setProducts(data.data || data); // Handle both formats
-    } catch (err) {
+      setProducts(data.data || data);
+      setTotalPages(data.totalPages || 1);
+    } catch (err: any) {
       console.error("Error fetching products:", err);
       setError(err.message || "Failed to load products");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    Alert.alert(
+      "Delete Product",
+      "Are you sure you want to delete this product?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_BASE}/products/${productId}`, {
+                method: "DELETE",
+              });
+              
+              if (!response.ok) {
+                throw new Error("Failed to delete product");
+              }
+              
+              Alert.alert("Success", "Product deleted successfully");
+              fetchProducts(); // Refresh list
+            } catch (err: any) {
+              Alert.alert("Error", err.message || "Failed to delete product");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchProducts(searchQuery);
+  };
+
+  const handleCategoryFilter = (category: string) => {
+    setSelectedCategory(category === selectedCategory ? "" : category);
+    setCurrentPage(1);
   };
 
   const loadSavedLocation = async () => {
@@ -158,7 +216,29 @@ const home = () => {
               className="flex-1 text-gray-800"
               placeholder="Search for products..."
               placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
             />
+            {searchQuery ? (
+              <TouchableOpacity 
+                onPress={() => {
+                  setSearchQuery("");
+                  setCurrentPage(1);
+                  fetchProducts("");
+                }}
+                className="ml-2"
+              >
+                <Text className="text-gray-400">✕</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity 
+              onPress={handleSearch}
+              className="ml-2 bg-emerald-600 px-3 py-1 rounded-lg"
+            >
+              <Text className="text-white text-xs font-semibold">Search</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -194,18 +274,27 @@ const home = () => {
             data={categories}
             horizontal
             showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View className="items-center mr-4">
+            keyExtractor={(item: any) => item.id.toString()}
+            renderItem={({ item }: any) => (
+              <TouchableOpacity 
+                onPress={() => handleCategoryFilter(item.name)}
+                className="items-center mr-4"
+              >
                 <View
-                  className={`w-16 h-16 rounded-full ${item.color} items-center justify-center mb-2`}
+                  className={`w-16 h-16 rounded-full ${
+                    selectedCategory === item.name ? 'bg-emerald-200' : item.color
+                  } items-center justify-center mb-2 ${
+                    selectedCategory === item.name ? 'border-2 border-emerald-600' : ''
+                  }`}
                 >
                   <Text className="text-3xl">{item.icon}</Text>
                 </View>
-                <Text className="text-xs font-medium text-gray-700">
+                <Text className={`text-xs font-medium ${
+                  selectedCategory === item.name ? 'text-emerald-600 font-bold' : 'text-gray-700'
+                }`}>
                   {item.name}
                 </Text>
-              </View>
+              </TouchableOpacity>
             )}
             scrollEnabled={true}
             nestedScrollEnabled={true}
@@ -215,9 +304,10 @@ const home = () => {
         <View className="px-4 py-4">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-lg font-bold text-gray-800">
-              Best Sellers
+              {selectedCategory ? `${selectedCategory} Products` : 'All Products'}
+              {searchQuery ? ` (Search: "${searchQuery}")` : ''}
             </Text>
-            <TouchableOpacity onPress={fetchProducts}>
+            <TouchableOpacity onPress={() => fetchProducts()}>
               <Text className="text-emerald-600 font-semibold text-sm">
                 Refresh →
               </Text>
@@ -244,11 +334,11 @@ const home = () => {
               data={products}
               horizontal
               showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item._id || item.id?.toString()}
-              renderItem={({ item }) => (
+              keyExtractor={(item: any) => item._id || item.id?.toString()}
+              renderItem={({ item }: any) => (
                 <View
                   className="bg-white rounded-xl p-3 mr-3 shadow-sm border border-gray-100"
-                  style={{ width: 150 }}
+                  style={{ width: 160 }}
                 >
                   <View className="w-full h-24 bg-gray-50 rounded-lg items-center justify-center mb-2 overflow-hidden">
                     {item.imageUrl ? (
@@ -275,28 +365,75 @@ const home = () => {
                     <Text className="text-lg font-bold text-emerald-600">
                       ₹{item.price}
                     </Text>
-                    <TouchableOpacity 
-                      className="bg-emerald-600 px-3 py-1 rounded-lg"
-                      onPress={() => {
-                        dispatch(addToCart({
-                          id: item._id || item.id,
-                          name: item.name,
-                          image: item.imageUrl || '📦',
-                          category: item.category,
-                          price: item.price
-                        }))
-                      }}
-                    >
-                      <Text className="text-white text-xs font-semibold">
-                        Add
-                      </Text>
-                    </TouchableOpacity>
+                    <View className="flex-row gap-1">
+                      <TouchableOpacity 
+                        className="bg-emerald-600 px-2 py-1 rounded-lg"
+                        onPress={() => {
+                          dispatch(addToCart({
+                            id: item._id || item.id,
+                            name: item.name,
+                            image: item.imageUrl || '📦',
+                            category: item.category,
+                            price: item.price
+                          }))
+                        }}
+                      >
+                        <Text className="text-white text-xs font-semibold">
+                          Add
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        className="bg-red-500 px-2 py-1 rounded-lg"
+                        onPress={() => handleDeleteProduct(item._id)}
+                      >
+                        <Text className="text-white text-xs font-semibold">
+                          🗑️
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               )}
               scrollEnabled={true}
               nestedScrollEnabled={true}
             />
+          )}
+
+          {/* Pagination Controls */}
+          {!loading && !error && totalPages > 1 && (
+            <View className="flex-row items-center justify-center mt-4 gap-2">
+              <TouchableOpacity 
+                className={`px-4 py-2 rounded-lg ${
+                  currentPage === 1 ? 'bg-gray-200' : 'bg-emerald-600'
+                }`}
+                onPress={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <Text className={`font-semibold ${
+                  currentPage === 1 ? 'text-gray-400' : 'text-white'
+                }`}>
+                  ← Previous
+                </Text>
+              </TouchableOpacity>
+              
+              <Text className="text-gray-600 font-medium">
+                Page {currentPage} of {totalPages}
+              </Text>
+              
+              <TouchableOpacity 
+                className={`px-4 py-2 rounded-lg ${
+                  currentPage === totalPages ? 'bg-gray-200' : 'bg-emerald-600'
+                }`}
+                onPress={() => setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <Text className={`font-semibold ${
+                  currentPage === totalPages ? 'text-gray-400' : 'text-white'
+                }`}>
+                  Next →
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </ScrollView>
