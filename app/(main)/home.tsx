@@ -7,6 +7,8 @@ import {
   TextInput,
   FlatList,
   Alert,
+  Image,
+  ActivityIndicator,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,20 +19,49 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDispatch } from "react-redux";
 import { addToCart } from "../../store/cartSlice";
 
-
+// API Base URL - Update this based on your setup
+// For Android Emulator: use 10.0.2.2
+// For iOS Simulator: use localhost
+// For Physical Device: use your computer's local IP (e.g., 192.168.1.100)
+const API_BASE = "http://10.0.2.2:5000/api"; // Change this as needed
 
 const home = () => {
   const router = useRouter();
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [locationName, setLocationName] = useState("Home");
-
+  
+  // Products state
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // initialize dispatcher
   const dispatch = useDispatch()
 
   useEffect(() => {
     loadSavedLocation();
+    fetchProducts();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`${API_BASE}/products`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch products");
+      }
+      
+      const data = await response.json();
+      setProducts(data.data || data); // Handle both formats
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setError(err.message || "Failed to load products");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadSavedLocation = async () => {
     try {
@@ -69,26 +100,13 @@ const home = () => {
       },
     ]);
   };
-  // Minimal placeholder data (UI only)
+  
+  // Categories data
   const categories = [
     { id: 1, name: "Fruits", icon: "🍎", color: "bg-red-100" },
     { id: 2, name: "Vegetables", icon: "🥬", color: "bg-green-100" },
     { id: 3, name: "Dairy", icon: "🥛", color: "bg-blue-100" },
-    { id: 4, name: "Electronics", icon: "🥛", color: "bg-blue-100" },
-    { id: 5, name: "Clothes", icon: "🥛", color: "bg-blue-100" },
-    { id: 6, name: "Snacks", icon: "🥛", color: "bg-blue-100" },
-  ];
-
-  const products = [
-    {
-      id: 1,
-      name: "Tomatoes",
-      price: "₹49",
-      image: "🍅",
-      category: "Vegetables",
-    },
-    { id: 2, name: "Bananas", price: "₹39", image: "🍌", category: "Fruits" },
-    { id: 3, name: "Milk", price: "₹65", image: "🥛", category: "Dairy" },
+    { id: 4, name: "Snacks", icon: "🍪", color: "bg-yellow-100" },
   ];
 
   return (
@@ -199,59 +217,87 @@ const home = () => {
             <Text className="text-lg font-bold text-gray-800">
               Best Sellers
             </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={fetchProducts}>
               <Text className="text-emerald-600 font-semibold text-sm">
-                View All →
+                Refresh →
               </Text>
             </TouchableOpacity>
           </View>
 
-          <FlatList
-            data={products}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View
-                className="bg-white rounded-xl p-3 mr-3 shadow-sm border border-gray-100"
-                style={{ width: 150 }}
+          {loading ? (
+            <View className="py-8 items-center">
+              <ActivityIndicator size="large" color="#059669" />
+              <Text className="text-gray-500 mt-2">Loading products...</Text>
+            </View>
+          ) : error ? (
+            <View className="py-8 items-center">
+              <Text className="text-red-500 mb-2">❌ {error}</Text>
+              <TouchableOpacity 
+                className="bg-emerald-600 px-4 py-2 rounded-lg"
+                onPress={fetchProducts}
               >
-                <View className="w-full h-24 bg-gray-50 rounded-lg items-center justify-center mb-2">
-                  <Text className="text-5xl">{item.image}</Text>
-                </View>
-
-                <Text
-                  className="text-sm font-semibold text-gray-800"
-                  numberOfLines={1}
+                <Text className="text-white font-semibold">Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={products}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item._id || item.id?.toString()}
+              renderItem={({ item }) => (
+                <View
+                  className="bg-white rounded-xl p-3 mr-3 shadow-sm border border-gray-100"
+                  style={{ width: 150 }}
                 >
-                  {item.name}
-                </Text>
-                <Text className="text-xs text-gray-500">{item.category}</Text>
+                  <View className="w-full h-24 bg-gray-50 rounded-lg items-center justify-center mb-2 overflow-hidden">
+                    {item.imageUrl ? (
+                      <Image 
+                        source={{ uri: item.imageUrl }} 
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text className="text-4xl">📦</Text>
+                    )}
+                  </View>
 
-                <View className="flex-row items-center justify-between mt-2">
-                  <Text className="text-lg font-bold text-emerald-600">
-                    {item.price}
+                  <Text
+                    className="text-sm font-semibold text-gray-800"
+                    numberOfLines={1}
+                  >
+                    {item.name}
                   </Text>
-                  <TouchableOpacity className="bg-emerald-600 px-3 py-1 rounded-lg"
-                  onPress={()=>{
-                    dispatch(addToCart({
-                      id:item.id,
-                      name:item.name,
-                      image: item.image,
-                      category: item.category,
-                      price : item.price
-                    }))
-                  }}>
-                    <Text className="text-white text-xs font-semibold">
-                      Add
+                  <Text className="text-xs text-gray-500">{item.category}</Text>
+                  <Text className="text-xs text-gray-400">Stock: {item.stock}</Text>
+
+                  <View className="flex-row items-center justify-between mt-2">
+                    <Text className="text-lg font-bold text-emerald-600">
+                      ₹{item.price}
                     </Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity 
+                      className="bg-emerald-600 px-3 py-1 rounded-lg"
+                      onPress={() => {
+                        dispatch(addToCart({
+                          id: item._id || item.id,
+                          name: item.name,
+                          image: item.imageUrl || '📦',
+                          category: item.category,
+                          price: item.price
+                        }))
+                      }}
+                    >
+                      <Text className="text-white text-xs font-semibold">
+                        Add
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            )}
-            scrollEnabled={true}
-            nestedScrollEnabled={true}
-          />
+              )}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
+            />
+          )}
         </View>
       </ScrollView>
 
