@@ -18,12 +18,7 @@ import LocationPicker from "../../components/LocationPicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDispatch } from "react-redux";
 import { addToCart } from "../../store/cartSlice";
-
-// API Base URL - Update this based on your setup
-// For Android Emulator: use 10.0.2.2
-// For iOS Simulator: use localhost
-// For Physical Device: use your computer's local IP (e.g., 192.168.1.100)
-const API_BASE = "http://10.0.2.2:5000/api"; // Change this as needed
+import { CATEGORIES, API_BASE } from "../../utils/constants";
 
 const home = () => {
   const router = useRouter();
@@ -158,14 +153,6 @@ const home = () => {
       },
     ]);
   };
-  
-  // Categories data
-  const categories = [
-    { id: 1, name: "Fruits", icon: "🍎", color: "bg-red-100" },
-    { id: 2, name: "Vegetables", icon: "🥬", color: "bg-green-100" },
-    { id: 3, name: "Dairy", icon: "🥛", color: "bg-blue-100" },
-    { id: 4, name: "Snacks", icon: "🍪", color: "bg-yellow-100" },
-  ];
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -271,7 +258,7 @@ const home = () => {
             Categories
           </Text>
           <FlatList
-            data={categories}
+            data={CATEGORIES}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item: any) => item.id.toString()}
@@ -307,7 +294,7 @@ const home = () => {
               {selectedCategory ? `${selectedCategory} Products` : 'All Products'}
               {searchQuery ? ` (Search: "${searchQuery}")` : ''}
             </Text>
-            <TouchableOpacity onPress={() => fetchProducts()}>
+            <TouchableOpacity onPress={() => fetchProducts("")}>
               <Text className="text-emerald-600 font-semibold text-sm">
                 Refresh →
               </Text>
@@ -324,7 +311,7 @@ const home = () => {
               <Text className="text-red-500 mb-2">❌ {error}</Text>
               <TouchableOpacity 
                 className="bg-emerald-600 px-4 py-2 rounded-lg"
-                onPress={fetchProducts}
+                onPress={() => fetchProducts()}
               >
                 <Text className="text-white font-semibold">Retry</Text>
               </TouchableOpacity>

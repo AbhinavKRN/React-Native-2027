@@ -35,6 +35,11 @@ export default function MainLayout() {
         title: "Profile",
         tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
       }} />
+
+      <Tabs.Screen 
+        name="category/[name]" 
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
